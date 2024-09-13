@@ -13,9 +13,9 @@ final class SubdomainHandlerTests: XCTestCase {
     let handler = SubdomainHandler()
     let _ = try handler.insertSubdomain(subdomain: "app")
     
-    XCTAssertNotNil(handler.nodes["app"], "Should have had node created")
+    XCTAssertNotNil(handler.nodes["app"])
     
-    XCTAssertNotNil(handler.nodes["app"]?.router, "Terminus node should have a router")
+    XCTAssertNotNil(handler.nodes["app"]?.router)
   }
   
   func testThreeDepthCase() async throws {
@@ -27,15 +27,15 @@ final class SubdomainHandlerTests: XCTestCase {
     
     let alphaNode = handler.nodes["alpha"]!
     
-    XCTAssertNil(alphaNode.router, "There should be no router since this is not the final handler")
+    XCTAssertNil(alphaNode.router)
     
     let betaNode = alphaNode.children["beta"]!
     
-    XCTAssertNil(betaNode.router, "There should be no router since this is not the final handler")
+    XCTAssertNil(betaNode.router)
     
     let omegaNode = betaNode.children["omega"]!
     
-    XCTAssertNotNil(omegaNode.router, "This should have a router set since it is the last handler")
+    XCTAssertNotNil(omegaNode.router)
   }
   
   func testMultipleSubdomainHandlers() async throws {
@@ -48,29 +48,45 @@ final class SubdomainHandlerTests: XCTestCase {
     
     let alphaNode = handler.nodes["alpha"]!
     
-    XCTAssertNil(alphaNode.router, "There should be no router since this is not the final handler")
+    XCTAssertNil(alphaNode.router)
     
-    XCTAssert(alphaNode.children.keys.count == 2, "We should have appened zulu to the alpha node children")
+    XCTAssert(alphaNode.children.keys.count == 2)
     
     let betaNode = alphaNode.children["beta"]!
     
-    XCTAssertNil(betaNode.router, "There should be no router since this is not the final handler")
+    XCTAssertNil(betaNode.router)
     
     let omegaNode = betaNode.children["omega"]!
     
-    XCTAssertNotNil(omegaNode.router, "This should have a router set since it is the last handler")
+    XCTAssertNotNil(omegaNode.router)
     
     let zuluNode = alphaNode.children["zulu"]!
     
-    XCTAssertNotNil(zuluNode.router, "This should have a router set since it is the last handler")
+    XCTAssertNotNil(zuluNode.router)
   }
   
   func testWildCardInsertionAtRoot() async throws {
+    let handler = SubdomainHandler()
     
+    let _ = try handler.insertSubdomain(subdomain: "*")
+    
+    XCTAssertNotNil(handler.fetchSubdomainNode(subdomain: "alpha"))
+    XCTAssertNotNil(handler.fetchSubdomainNode(subdomain: "beta"))
+    XCTAssertNotNil(handler.fetchSubdomainNode(subdomain: "omega"))
   }
   
   func testWildCardInsertion() async throws {
+    let handler = SubdomainHandler()
     
+    XCTAssertThrowsError(try handler.insertSubdomain(subdomain: "beta.*.alpha"))
+    XCTAssertThrowsError(try handler.insertSubdomain(subdomain: "*.*.alpha"))
+  }
+  
+  func testReinsertingNodeFails() {
+    let handler = SubdomainHandler()
+    
+    XCTAssertNoThrow(try handler.insertSubdomain(subdomain: "beta.alpha"))
+    XCTAssertThrowsError(try handler.insertSubdomain(subdomain: "beta.alpha"))
   }
   
   func testFetchingSubdomains() async throws {
@@ -80,7 +96,6 @@ final class SubdomainHandlerTests: XCTestCase {
     let _ = try handler.insertSubdomain(subdomain: "beta.alpha")
     let _ = try handler.insertSubdomain(subdomain: "*.alpha")
     let _ = try handler.insertSubdomain(subdomain: "zulu.alpha")
-    let _ = try handler.insertSubdomain(subdomain: "zulu.omega.beta.alpha")
     let _ = try handler.insertSubdomain(subdomain: "app")
     let _ = try handler.insertSubdomain(subdomain: "zulu.beta")
     
@@ -88,7 +103,6 @@ final class SubdomainHandlerTests: XCTestCase {
     XCTAssertNotNil(handler.fetchSubdomainNode(subdomain: "beta.alpha"))
     XCTAssertNotNil(handler.fetchSubdomainNode(subdomain: "wildcard.alpha"))
     XCTAssertNotNil(handler.fetchSubdomainNode(subdomain: "zulu.alpha"))
-    XCTAssertNotNil(handler.fetchSubdomainNode(subdomain: "zulu.omega.beta.alpha"))
     XCTAssertNotNil(handler.fetchSubdomainNode(subdomain: "app"))
     XCTAssertNotNil(handler.fetchSubdomainNode(subdomain: "zulu.beta"))
     
@@ -140,4 +154,11 @@ final class SubdomainHandlerTests: XCTestCase {
     XCTAssertNil(handler.handleRequest(request: wwwRequest))
     XCTAssertNil(handler.handleRequest(request: baseRequest))
   }
+  
+  func testMaxDepth() async throws {
+    let handler = SubdomainHandler()
+    
+    XCTAssertThrowsError(try handler.insertSubdomain(subdomain: "zulu.omega.alpha.beta"))
+  }
+  
 }

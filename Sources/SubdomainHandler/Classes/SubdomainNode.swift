@@ -41,13 +41,13 @@ import Vapor
 ///   - subdomain: The part of the subdomain that the node is registered for
 ///
 public final class SubdomainNode {
-  public var subdomain: String
+  private var subdomain: String
   
   public var router: SubdomainRouter?
   
-  public var hasWildcard: Bool
+  internal var hasWildcard: Bool
 
-  public var children: [String: SubdomainNode]
+  internal var children: [String: SubdomainNode]
   
   public init(subdomain: String) {
     self.subdomain = subdomain

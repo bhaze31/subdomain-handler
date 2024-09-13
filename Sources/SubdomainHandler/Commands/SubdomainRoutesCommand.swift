@@ -34,37 +34,37 @@ public final class SubdomainRoutesCommand: AsyncCommand {
   init() { }
   
   public func run(using context: ConsoleKitCommands.CommandContext, signature: Signature) async throws {
-    //    let routes = context.application.routes
-    //
-    //    let includeDescription = !routes.all.filter { $0.userInfo["description"] != nil }.isEmpty
-    //
-    //    let pathSeparator = "/".consoleText()
+    let routes = context.application.routes
     
-    //    let defaultTable = routes.all.map { route -> [ConsoleText] in
-    //      var column = [route.method.string.consoleText()]
-    //      if route.path.isEmpty {
-    //        column.append(pathSeparator)
-    //      } else {
-    //        column.append(route.path
-    //          .map { pathSeparator + $0.consoleText() }
-    //          .reduce("".consoleText(), +)
-    //        )
-    //      }
-    //
-    //      column.append("default")
-    //
-    //      if includeDescription {
-    //        let desc = route.userInfo["description"]
-    //          .flatMap { $0 as? String }
-    //          .flatMap { $0.consoleText() } ?? ""
-    //        column.append(desc)
-    //      }
-    //
-    //      return column
-    //    }
+    let includeDescription = !routes.all.filter { $0.userInfo["description"] != nil }.isEmpty
     
+    let pathSeparator = "/".consoleText()
     
-    //    context.console.outputASCIITable(defaultTable)
+    let defaultTable = routes.all.map { route -> [ConsoleText] in
+      var column = [route.method.string.consoleText()]
+      if route.path.isEmpty {
+        column.append(pathSeparator)
+      } else {
+        column.append(route.path
+          .map { pathSeparator + $0.consoleText() }
+          .reduce("".consoleText(), +)
+        )
+      }
+      
+      column.append("default")
+      
+      if includeDescription {
+        let desc = route.userInfo["description"]
+          .flatMap { $0 as? String }
+          .flatMap { $0.consoleText() } ?? ""
+        column.append(desc)
+      }
+      
+      return column
+    }
+
+    
+    context.console.outputASCIITable(defaultTable)
   }
 }
 

@@ -31,16 +31,7 @@ public final class SubdomainRouter {
         responder: middleware.makeResponder(chainingTo: route.responder)
       )
       
-      let path = route.path.filter { component in
-        switch component {
-          case .constant(let string):
-            return string != ""
-          default:
-            return true
-        }
-      }
-      
-      trieRouter.register(cached, at: [.constant(route.method.string)] + path)
+      trieRouter.register(cached, at: [.constant(route.method.string)] + route.path)
     }
   }
   

@@ -27,9 +27,10 @@ This will take all of the nodes that have routes, create a TrieRouter for them, 
 
 ### To be accomplished
 - [ ] Command to print out all of the subdomains
-- [ ] Easier insertion/retrieval from the app
+- [x] Easier insertion/retrieval from the app
 - [ ] Prevent wildcards except at apex
 - [ ] Limit the depth of subdomains
-- [ ] Refactor to reduce models/complexity
+- [x] Refactor to reduce models/complexity
 - [ ] Document all functions
-- [ ] Restrict access to internal features for simplicity
+- [x] Restrict access to internal features for simplicity
+- [ ] Code cleanup

@@ -30,8 +30,6 @@ let baseRequest = Request(
   on: app.eventLoopGroup.any()
 )
 
-
-
 let getRequest = Request(
   application: app,
   method: .GET,
@@ -70,6 +68,20 @@ let controlller2Request = Request(
   byteBufferAllocator: app.client.byteBufferAllocator,
   on: app.eventLoopGroup.any()
 )
+
+let controlller3Request = Request(
+  application: app,
+  method: .GET,
+  url: "/demo/path/different",
+  version: .http1_1,
+  headers: [
+    "host": "beta.alpha.mydomain.tld"
+  ],
+  logger: app.logger,
+  byteBufferAllocator: app.client.byteBufferAllocator,
+  on: app.eventLoopGroup.any()
+)
+
 
 final class TestController1: RouteCollection {
   func boot(routes: RoutesBuilder) throws {

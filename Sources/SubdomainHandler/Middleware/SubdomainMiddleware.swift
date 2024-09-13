@@ -10,11 +10,11 @@ import Vapor
 
 public final class SubdomainMiddleware: AsyncMiddleware, @unchecked Sendable {
   public init(app: Application) {
-    app.subdomainHandler.enableRouters(app: app)
+    app.enableSubdomainRouters()
   }
 
   public func respond(to request: Request, chainingTo next: AsyncResponder) async throws -> Response {
-    if let responder = request.application.subdomainHandler.handleRequest(request: request) {
+    if let responder = request.application.handleRequest(request: request) {
       return try await responder.respond(to: request).get()
     }
     

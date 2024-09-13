@@ -10,11 +10,11 @@ import Foundation
 import Vapor
 
 public final class SubdomainHandler: @unchecked Sendable {
-  public var nodes: [String: SubdomainNode]
+  internal var nodes: [String: SubdomainNode]
   
-  public var catchAll: SubdomainNode?
-  
-  public init() {
+  internal var catchAll: SubdomainNode?
+
+  internal init() {
     self.nodes = [:]
   }
   
@@ -25,24 +25,38 @@ public final class SubdomainHandler: @unchecked Sendable {
   public func insertSubdomain(subdomain: String) throws -> SubdomainNode {
     var parts = subdomain.split(separator: ".").map { String($0) }
     
-    if let root = parts.popLast() {
-      if let node = nodes[root] {
-        return try traverseNodeInsertion(node: node, remainingParts: &parts)
-      } else {
-        // Create a node, set it, and traverse
-        let node = SubdomainNode(subdomain: root)
-        
-        // We are creating a wildcard route at the root, which means any
-        if root == "*" {
-          self.catchAll = node
-        }
-        
-        nodes[root] = node
-        
-        return try traverseNodeInsertion(node: node, remainingParts: &parts)
+    // Limit the depth of the subdomain to be max of 3
+    if parts.count > 3 {
+      throw NodeInsertionError(message: "Subdomain must be 3 or less parts")
+    }
+    
+    if parts.contains("*") {
+      // We have a wildcard somewhere, it must be top level only
+      if parts.filter({ $0 == "*" }).count != 1 {
+        throw NodeInsertionError(message: "Wildcard must only appear one time")
       }
+      
+      if parts[0] != "*" {
+        throw NodeInsertionError(message: "Wildcard must only appear at the apex domain")
+      }
+    }
+
+    let root = parts.popLast()!
+    
+    if let node = nodes[root] {
+      return try traverseNodeInsertion(node: node, remainingParts: &parts)
     } else {
-      throw NodeInsertionError(message: "Failure to parse subdomain")
+      // Create a node, set it, and traverse
+      let node = SubdomainNode(subdomain: root)
+      
+      // We are creating a wildcard route at the root
+      if root == "*" {
+        self.catchAll = node
+      }
+      
+      nodes[root] = node
+      
+      return try traverseNodeInsertion(node: node, remainingParts: &parts)
     }
   }
   
@@ -81,6 +95,7 @@ public final class SubdomainHandler: @unchecked Sendable {
   }
   
   // MARK: Enabling routers
+
   public func enableRouters(app: Application)  {
     for node in nodes.values {
       node.enableRouter(app: app)
@@ -103,9 +118,7 @@ public final class SubdomainHandler: @unchecked Sendable {
     }
     
     while !parts.isEmpty {
-      guard let nextPart = parts.popLast() else {
-        continue
-      }
+      let nextPart = parts.popLast()!
       
       if let nextNode = currentNode.children[nextPart] {
         currentNode = nextNode

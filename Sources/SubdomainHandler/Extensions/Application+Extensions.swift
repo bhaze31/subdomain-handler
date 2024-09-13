@@ -10,7 +10,7 @@ import Vapor
 
 
 extension Application {
-  public var subdomainHandler: SubdomainHandler {
+  private var subdomainHandler: SubdomainHandler {
     get {
       if let router = self.storage[SubdomainHandlerKey.self] {
         return router
@@ -22,13 +22,18 @@ extension Application {
       
       return router
     }
-    set {
-      self.storage[SubdomainHandlerKey.self] = newValue
-    }
   }
   
-  public func createSubdomain(subdomain: String) throws -> SubdomainNode {
+  private func createSubdomain(subdomain: String) throws -> SubdomainNode {
     return try subdomainHandler.insertSubdomain(subdomain: subdomain)
+  }
+  
+  public func enableSubdomainRouters() {
+    subdomainHandler.enableRouters(app: self)
+  }
+  
+  public func handleRequest(request: Request) -> Vapor.Responder? {
+    return subdomainHandler.handleRequest(request: request)
   }
   
   public func register(collection: RouteCollection, at subdomain: String) throws {
