@@ -18,7 +18,7 @@ public final class SubdomainRouter {
   
   var trieRouter = TrieRouter(CachedRoute.self)
   
-  public func register(app: Application, userInfo:[AnySendableHashable: Sendable]? = nil) {
+  public func register(app: Application, userInfo: [AnySendableHashable: Sendable]? = nil) {
     let middleware = app.middleware.resolve()
     
     for route in routes.all {

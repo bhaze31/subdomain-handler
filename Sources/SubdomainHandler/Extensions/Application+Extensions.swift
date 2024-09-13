@@ -10,28 +10,36 @@ import Vapor
 
 
 extension Application {
-  public var subdomainRouter: SubdomainHandler {
+  public var subdomainHandler: SubdomainHandler {
     get {
-      if let router = self.storage[SubdomainRouterKey.self] {
+      if let router = self.storage[SubdomainHandlerKey.self] {
         return router
       }
       
       let router = SubdomainHandler()
       
-      self.storage[SubdomainRouterKey.self] = router
+      self.storage[SubdomainHandlerKey.self] = router
       
       return router
     }
     set {
-      self.storage[SubdomainRouterKey.self] = newValue
+      self.storage[SubdomainHandlerKey.self] = newValue
     }
   }
   
-  public var subdomains: [String] {
-    return subdomainRouter.fetchSubdomains()
+  public func createSubdomain(subdomain: String) throws -> SubdomainNode {
+    return try subdomainHandler.insertSubdomain(subdomain: subdomain)
   }
   
-  public func createSubdomain(subdomain: String) throws -> SubdomainNode {
-    return try subdomainRouter.insertSubdomain(subdomain: subdomain)
+  public func register(collection: RouteCollection, at subdomain: String) throws {
+    if let router = subdomainHandler.fetchSubdomainNode(subdomain: subdomain)?.router {
+      // We only receive nodes when there is an existing router attached, so if we found
+      // the subdomain node then the router will exist
+      try router.routes.register(collection: collection)
+    } else {
+      // If we are here, we know that the router will exist, since we just registered it
+      let node = try createSubdomain(subdomain: subdomain)
+      try node.router!.routes.register(collection: collection)
+    }
   }
 }

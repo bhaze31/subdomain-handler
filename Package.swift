@@ -28,6 +28,12 @@ let package = Package(
               .product(name: "Vapor", package: "vapor")
             ]
         ),
+        .executableTarget(
+          name: "DemoServer",
+          dependencies: [
+            .target(name: "SubdomainHandler")
+          ]
+        ),
         .testTarget(
             name: "SubdomainHandlerTests",
             dependencies: ["SubdomainHandler"]),

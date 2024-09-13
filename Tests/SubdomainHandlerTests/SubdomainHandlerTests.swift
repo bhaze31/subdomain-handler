@@ -10,80 +10,59 @@ import XCTest
 
 final class SubdomainHandlerTests: XCTestCase {
   func testSingularCase() async throws {
-    let router = SubdomainHandler()
-    let _ = try router.insertSubdomain(subdomain: "app")
+    let handler = SubdomainHandler()
+    let _ = try handler.insertSubdomain(subdomain: "app")
     
-    XCTAssertNotNil(router.nodes["app"], "Should have had node created")
+    XCTAssertNotNil(handler.nodes["app"], "Should have had node created")
     
-    XCTAssertNotNil(router.nodes["app"]?.routes, "Terminus node should have a router")
+    XCTAssertNotNil(handler.nodes["app"]?.router, "Terminus node should have a router")
   }
   
   func testThreeDepthCase() async throws {
-    let router = SubdomainHandler()
+    let handler = SubdomainHandler()
     
-    let _ = try router.insertSubdomain(subdomain: "omega.beta.alpha")
+    let _ = try handler.insertSubdomain(subdomain: "omega.beta.alpha")
     
-    XCTAssertNotNil(router.nodes["alpha"])
+    XCTAssertNotNil(handler.nodes["alpha"])
     
-    guard let alphaNode = router.nodes["alpha"] else {
-      XCTFail("Could not retrieve node from the router")
-      return
-    }
+    let alphaNode = handler.nodes["alpha"]!
     
-    XCTAssertNil(alphaNode.routes, "There should be no router since this is not the final handler")
+    XCTAssertNil(alphaNode.router, "There should be no router since this is not the final handler")
     
-    guard let betaNode = alphaNode.children["beta"] else {
-      XCTFail("Could not retrieve beta node from parent")
-      return
-    }
+    let betaNode = alphaNode.children["beta"]!
     
-    XCTAssertNil(alphaNode.routes, "There should be no router since this is not the final handler")
+    XCTAssertNil(betaNode.router, "There should be no router since this is not the final handler")
     
-    guard let omegaNode = betaNode.children["omega"] else {
-      XCTFail("Could not retrieve omega node from parent")
-      return
-    }
+    let omegaNode = betaNode.children["omega"]!
     
-    XCTAssertNotNil(omegaNode.routes, "This should have a router set since it is the last router")
+    XCTAssertNotNil(omegaNode.router, "This should have a router set since it is the last handler")
   }
   
   func testMultipleSubdomainHandlers() async throws {
-    let router = SubdomainHandler()
+    let handler = SubdomainHandler()
     
-    let _ = try router.insertSubdomain(subdomain: "omega.beta.alpha")
-    let _ = try router.insertSubdomain(subdomain: "zulu.alpha")
+    let _ = try handler.insertSubdomain(subdomain: "omega.beta.alpha")
+    let _ = try handler.insertSubdomain(subdomain: "zulu.alpha")
     
-    XCTAssertNotNil(router.nodes["alpha"])
+    XCTAssertNotNil(handler.nodes["alpha"])
     
-    guard let alphaNode = router.nodes["alpha"] else {
-      XCTFail("Could not retrieve node from the router")
-      return
-    }
+    let alphaNode = handler.nodes["alpha"]!
     
-    XCTAssertNil(alphaNode.routes, "There should be no router since this is not the final handler")
+    XCTAssertNil(alphaNode.router, "There should be no router since this is not the final handler")
     
     XCTAssert(alphaNode.children.keys.count == 2, "We should have appened zulu to the alpha node children")
     
-    guard let betaNode = alphaNode.children["beta"] else {
-      XCTFail("Could not retrieve beta node from parent")
-      return
-    }
+    let betaNode = alphaNode.children["beta"]!
     
-    XCTAssertNil(alphaNode.routes, "There should be no router since this is not the final handler")
+    XCTAssertNil(betaNode.router, "There should be no router since this is not the final handler")
     
-    guard let omegaNode = betaNode.children["omega"] else {
-      XCTFail("Could not retrieve omega node from parent")
-      return
-    }
+    let omegaNode = betaNode.children["omega"]!
     
-    XCTAssertNotNil(omegaNode.routes, "This should have a router set since it is the last router")
+    XCTAssertNotNil(omegaNode.router, "This should have a router set since it is the last handler")
     
-    guard let zuluNode = alphaNode.children["zulu"] else {
-      XCTFail("Could not retrieve zulu node from parent")
-      return
-    }
+    let zuluNode = alphaNode.children["zulu"]!
     
-    XCTAssertNotNil(zuluNode.routes, "This should have a router set since it is the last router")
+    XCTAssertNotNil(zuluNode.router, "This should have a router set since it is the last handler")
   }
   
   func testWildCardInsertionAtRoot() async throws {
@@ -92,5 +71,73 @@ final class SubdomainHandlerTests: XCTestCase {
   
   func testWildCardInsertion() async throws {
     
+  }
+  
+  func testFetchingSubdomains() async throws {
+    let handler = SubdomainHandler()
+    
+    let _ = try handler.insertSubdomain(subdomain: "omega.beta.alpha")
+    let _ = try handler.insertSubdomain(subdomain: "beta.alpha")
+    let _ = try handler.insertSubdomain(subdomain: "*.alpha")
+    let _ = try handler.insertSubdomain(subdomain: "zulu.alpha")
+    let _ = try handler.insertSubdomain(subdomain: "zulu.omega.beta.alpha")
+    let _ = try handler.insertSubdomain(subdomain: "app")
+    let _ = try handler.insertSubdomain(subdomain: "zulu.beta")
+    
+    XCTAssertNotNil(handler.fetchSubdomainNode(subdomain: "omega.beta.alpha"))
+    XCTAssertNotNil(handler.fetchSubdomainNode(subdomain: "beta.alpha"))
+    XCTAssertNotNil(handler.fetchSubdomainNode(subdomain: "wildcard.alpha"))
+    XCTAssertNotNil(handler.fetchSubdomainNode(subdomain: "zulu.alpha"))
+    XCTAssertNotNil(handler.fetchSubdomainNode(subdomain: "zulu.omega.beta.alpha"))
+    XCTAssertNotNil(handler.fetchSubdomainNode(subdomain: "app"))
+    XCTAssertNotNil(handler.fetchSubdomainNode(subdomain: "zulu.beta"))
+    
+    XCTAssertNil(handler.fetchSubdomainNode(subdomain: "zulu.beta.alpha"))
+    XCTAssertNil(handler.fetchSubdomainNode(subdomain: "alpha"))
+  }
+  
+  func testHandleRequest() async throws {
+    let handler = SubdomainHandler()
+    
+    let node = try handler.insertSubdomain(subdomain: "beta.alpha")
+    
+    try node.router!.routes.register(collection: TestController1())
+    
+    let node2 = try handler.insertSubdomain(subdomain: "omega.alpha")
+    
+    try node2.router!.routes.register(collection: TestController2())
+    
+    handler.enableRouters(app: app)
+
+    var responder = handler.handleRequest(request: getRequest)
+    
+    XCTAssertNotNil(responder)
+    
+    var result = try await responder!.respond(to: getRequest).get()
+    var body = try result.content.decode(String.self)
+    
+    XCTAssertEqual("TestController1 - Get", body)
+    
+    responder = handler.handleRequest(request: controlller2Request)
+    
+    result = try await responder!.respond(to: getRequest).get()
+    body = try result.content.decode(String.self)
+    
+    XCTAssertEqual("TestController2 - Get", body)
+    
+    XCTAssertNil(handler.handleRequest(request: badRequest))
+  }
+  
+  func testDefaultRoutes() async throws {
+    let handler = SubdomainHandler()
+    
+    let node = try handler.insertSubdomain(subdomain: "beta.alpha")
+    
+    try node.router!.routes.register(collection: TestController1())
+    
+    handler.enableRouters(app: app)
+    
+    XCTAssertNil(handler.handleRequest(request: wwwRequest))
+    XCTAssertNil(handler.handleRequest(request: baseRequest))
   }
 }

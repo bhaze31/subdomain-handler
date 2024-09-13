@@ -42,11 +42,13 @@ public final class SubdomainHandler: @unchecked Sendable {
         return try traverseNodeInsertion(node: node, remainingParts: &parts)
       }
     } else {
-      throw NodeInsertionError()
+      throw NodeInsertionError(message: "Failure to parse subdomain")
     }
   }
   
-  struct NodeInsertionError: Error {}
+  struct NodeInsertionError: Error {
+    var message: String
+  }
   
   private func traverseNodeInsertion(node: SubdomainNode, remainingParts: inout [String]) throws -> SubdomainNode {
     if let nextPath = remainingParts.popLast() {
@@ -66,63 +68,36 @@ public final class SubdomainHandler: @unchecked Sendable {
       // Else, create one and continue
     } else {
       // We have reached the bottom, check if this node has a router, and if so raise
-      if node.routes != nil {
+      if node.router != nil {
         // It has existing routes, throw an error
-        throw NodeInsertionError()
+        throw NodeInsertionError(message: "Terminus route already exists, exiting")
         
       } else {
-        node.routes = Routes()
+        node.router = SubdomainRouter()
         
         return node
       }
     }
   }
   
-  // MARK: Fetching Subdomains
-  public func fetchSubdomainRouteCollection(subdomain: String) -> SubdomainNode? {
-    var parts = subdomain.split(separator: ".").map { String($0) }
-    
-    var node: SubdomainNode?
-    
-    guard let root = parts.popLast() else { return node }
-    
-    if let current = nodes[root] {
-      node = current.fetchNode(parts: &parts)
-    } else if root == "*" && catchAll != nil {
-      // We have a wildcard,
-      node = catchAll?.fetchNode(parts: &parts)
-    }
-    
-    return node
-  }
-  
-  public func fetchSubdomains() -> [String] {
-    var domains: [String] = []
-    
+  // MARK: Enabling routers
+  public func enableRouters(app: Application)  {
     for node in nodes.values {
-      domains += node.gatherSubnodes()
+      node.enableRouter(app: app)
     }
-    
-    return domains
   }
-  
-  func buildSubdomainForResponders(subdomain: String) -> String? {
+
+  public func fetchSubdomainNode(subdomain: String) -> SubdomainNode? {
     var parts = subdomain.split(separator: ".").map { String($0) }
     
-    var node: SubdomainNode
+    var currentNode: SubdomainNode
     
-    guard let root = parts.popLast() else {
-      return subdomain
-    }
-    
-    var constructed: [String] = []
+    let root = parts.popLast()!
     
     if let rootNode = nodes[root] {
-      node = rootNode
-      constructed.append(root)
+      currentNode = rootNode
     } else if let catchAll  {
-      node = catchAll
-      constructed.append("*")
+      currentNode = catchAll
     } else {
       return nil
     }
@@ -132,22 +107,19 @@ public final class SubdomainHandler: @unchecked Sendable {
         continue
       }
       
-      if let nextNode = node.children[nextPart] {
-        constructed.append(nextPart)
-        node = nextNode
-      } else if node.hasWildcard, let wildCardNode = node.children["*"] {
-        constructed.append("*")
-        node = wildCardNode
+      if let nextNode = currentNode.children[nextPart] {
+        currentNode = nextNode
+      } else if currentNode.hasWildcard, let wildCardNode = currentNode.children["*"] {
+        currentNode = wildCardNode
       } else {
         return nil
       }
     }
     
-    return Array(constructed.reversed()).joined(separator: ".")
-  }
-  
-  func fetchSubdomainNode(subdomain: inout [String]) -> SubdomainNode? {
-    
+    if currentNode.router != nil {
+      return currentNode
+    }
+
     return nil
   }
   
@@ -168,9 +140,10 @@ public final class SubdomainHandler: @unchecked Sendable {
       // We have a valid subdomain, attempt to retrieve a SubdomainRoute
       // This will grab the remaing subdomain, for example if we beta.app.mydomain.io
       // the subdomain will be ["beta", "app"]
-      var subdomain = Array(parts[0..<parts.count - 2])
-      if let subdomainRoute = fetchSubdomainNode(subdomain: &subdomain)?.route {
-        if let route = subdomainRoute.respondsToRequest(request: request) {
+      let subdomain = Array(parts[0..<parts.count - 2]).joined(separator: ".")
+
+      if let subdomainRouter = fetchSubdomainNode(subdomain: subdomain)?.router {
+        if let route = subdomainRouter.respondsToRequest(request: request) {
           return route.responder
         }
       }
@@ -181,7 +154,7 @@ public final class SubdomainHandler: @unchecked Sendable {
 }
 
 
-public struct SubdomainRouterKey: StorageKey {
+public struct SubdomainHandlerKey: StorageKey {
   public typealias Value = SubdomainHandler
 }
 
