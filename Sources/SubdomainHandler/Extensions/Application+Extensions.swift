@@ -28,8 +28,10 @@ extension Application {
     return try subdomainHandler.insertSubdomain(subdomain: subdomain)
   }
   
-  public func enableSubdomainRouters() {
+  public func enableSubdomains() {
     subdomainHandler.enableRouters(app: self)
+    
+    self.middleware.use(SubdomainMiddleware())
   }
   
   public func handleRequest(request: Request) -> Vapor.Responder? {

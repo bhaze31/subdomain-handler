@@ -14,7 +14,7 @@ final class ApplicationExtensionTests: XCTestCase {
     try app.register(collection: TestController1(), at: "beta.alpha")
     try app.register(collection: TestController2(), at: "beta.alpha")
     
-    app.enableSubdomainRouters()
+    app.enableSubdomains()
     
     XCTAssertNotNil(app.handleRequest(request: getRequest))
   }

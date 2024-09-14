@@ -16,9 +16,9 @@ final class SubdomainMiddlewareTests: XCTestCase {
     try app.register(collection: TestController1(), at: "beta.alpha")
     try app.register(collection: TestController2())
 
-    app.enableSubdomainRouters()
+    app.enableSubdomains()
     
-    let middleware = SubdomainMiddleware(app: app)
+    let middleware = SubdomainMiddleware()
     
     let getRequest = Request(
       application: app,
